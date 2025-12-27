@@ -21,15 +21,18 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
     active_clis = cli_config.get_active_clis()
     council_models = [cli["id"] for cli in active_clis]
 
+    # Create mapping from ID to display name
+    id_to_name = {cli["id"]: cli["name"] for cli in active_clis}
+
     # Query all models in parallel
     responses = await query_models_parallel(council_models, messages)
 
-    # Format results
+    # Format results using display names
     stage1_results = []
-    for model, response in responses.items():
+    for model_id, response in responses.items():
         if response is not None:  # Only include successful responses
             stage1_results.append({
-                "model": model,
+                "model": id_to_name.get(model_id, model_id),
                 "response": response.get('content', '')
             })
 
@@ -102,17 +105,20 @@ Now provide your evaluation and ranking:"""
     active_clis = cli_config.get_active_clis()
     council_models = [cli["id"] for cli in active_clis]
 
+    # Create mapping from ID to display name
+    id_to_name = {cli["id"]: cli["name"] for cli in active_clis}
+
     # Get rankings from all council models in parallel
     responses = await query_models_parallel(council_models, messages)
 
-    # Format results
+    # Format results using display names
     stage2_results = []
-    for model, response in responses.items():
+    for model_id, response in responses.items():
         if response is not None:
             full_text = response.get('content', '')
             parsed = parse_ranking_from_text(full_text)
             stage2_results.append({
-                "model": model,
+                "model": id_to_name.get(model_id, model_id),
                 "ranking": full_text,
                 "parsed_ranking": parsed
             })
@@ -175,6 +181,7 @@ Provide a clear, well-reasoned final answer that represents the council's collec
         }
 
     chairman_id = chairman["id"]
+    chairman_name = chairman["name"]
 
     # Query the chairman model
     response = await query_model(chairman_id, messages)
@@ -182,12 +189,12 @@ Provide a clear, well-reasoned final answer that represents the council's collec
     if response is None:
         # Fallback if chairman fails
         return {
-            "model": chairman_id,
+            "model": chairman_name,
             "response": "Error: Unable to generate final synthesis."
         }
 
     return {
-        "model": chairman_id,
+        "model": chairman_name,
         "response": response.get('content', '')
     }
 
