@@ -86,10 +86,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
-  padding: 10px 12px;
+  padding: 8px;
   background: none;
-  border: 1px solid #ddd;
+  border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
@@ -99,10 +98,18 @@
 
 .settings-btn:hover {
   background: #f0f0f0;
-  border-color: #ccc;
   color: #333;
 }
 
 .settings-icon {
-  font-size: 18px;
+  font-size: 24px;
+}
+
+.settings-label {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.settings-btn:hover .settings-label {
+  opacity: 1;
 }

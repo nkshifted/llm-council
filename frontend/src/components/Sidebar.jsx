@@ -47,7 +47,7 @@ export default function Sidebar({
           title="Settings"
         >
           <span className="settings-icon">{'\u2699'}</span>
-          <span>Settings</span>
+          <span className="settings-label">Settings</span>
         </button>
       </div>
     </div>
