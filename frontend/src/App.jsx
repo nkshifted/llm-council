@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
+import SettingsModal from './components/SettingsModal';
 import { api } from './api';
 import './App.css';
 
@@ -9,11 +10,23 @@ function App() {
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [currentConversation, setCurrentConversation] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [config, setConfig] = useState(null);
 
-  // Load conversations on mount
+  // Load conversations and config on mount
   useEffect(() => {
     loadConversations();
+    loadConfig();
   }, []);
+
+  const loadConfig = async () => {
+    try {
+      const cfg = await api.getConfig();
+      setConfig(cfg);
+    } catch (error) {
+      console.error('Failed to load config:', error);
+    }
+  };
 
   // Load conversation details when selected
   useEffect(() => {
@@ -181,6 +194,18 @@ function App() {
     }
   };
 
+  const handleOpenSettings = () => {
+    setShowSettings(true);
+  };
+
+  const handleCloseSettings = () => {
+    setShowSettings(false);
+  };
+
+  const handleConfigSaved = (newConfig) => {
+    setConfig(newConfig);
+  };
+
   return (
     <div className="app">
       <Sidebar
@@ -188,11 +213,18 @@ function App() {
         currentConversationId={currentConversationId}
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
+        onOpenSettings={handleOpenSettings}
       />
       <ChatInterface
         conversation={currentConversation}
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
+      />
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={handleCloseSettings}
+        config={config}
+        onConfigSaved={handleConfigSaved}
       />
     </div>
   );

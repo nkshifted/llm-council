@@ -112,4 +112,53 @@ export const api = {
       }
     }
   },
+
+  /**
+   * Get the CLI configuration.
+   */
+  async getConfig() {
+    const response = await fetch(`${API_BASE}/api/config`);
+    if (!response.ok) {
+      throw new Error('Failed to get config');
+    }
+    return response.json();
+  },
+
+  /**
+   * Save the CLI configuration.
+   */
+  async saveConfig(config) {
+    const response = await fetch(`${API_BASE}/api/config`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(config),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to save config');
+    }
+    return response.json();
+  },
+
+  /**
+   * Test a CLI command.
+   * @param {string} command - The CLI command
+   * @param {string[]} args - The CLI arguments
+   * @returns {Promise<{success: boolean, response?: string, error?: string}>}
+   */
+  async testCli(command, args) {
+    const response = await fetch(`${API_BASE}/api/config/test-cli`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ command, args }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to test CLI');
+    }
+    return response.json();
+  },
 };

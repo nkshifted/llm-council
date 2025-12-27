@@ -3,26 +3,19 @@
 import asyncio
 from typing import List, Dict, Any, Optional
 
-# CLI configurations: model name -> (command, args_format)
-# args_format: 'positional' = command <query>, 'flag' = command -flag "<query>"
-CLI_CONFIGS = {
-    "gemini": {
-        "command": "gemini",
-        "args": [],  # positional, query appended directly
-    },
-    "claude": {
-        "command": "claude",
-        "args": ["-p"],  # -p "<query>"
-    },
-    "codex": {
-        "command": "codex",
-        "args": ["exec"],  # exec "<query>"
-    },
-    "amp": {
-        "command": "amp",
-        "args": ["-x"],  # -x "<query>"
-    },
-}
+from . import cli_config
+
+
+def get_cli_configs() -> Dict[str, Dict[str, Any]]:
+    """
+    Load CLI configurations from cli_config.py.
+    Returns a dict mapping CLI id to {command, args}.
+    """
+    config = cli_config.load_config()
+    return {
+        cli["id"]: {"command": cli["command"], "args": cli["args"]}
+        for cli in config["clis"]
+    }
 
 
 def format_messages_as_prompt(messages: List[Dict[str, str]]) -> str:
@@ -66,11 +59,13 @@ async def query_model(
     Returns:
         Response dict with 'content' and optional 'reasoning_details', or None if failed
     """
-    if model not in CLI_CONFIGS:
-        print(f"Unknown model: {model}. Available: {list(CLI_CONFIGS.keys())}")
+    cli_configs = get_cli_configs()
+
+    if model not in cli_configs:
+        print(f"Unknown model: {model}. Available: {list(cli_configs.keys())}")
         return None
 
-    config = CLI_CONFIGS[model]
+    config = cli_configs[model]
     prompt = format_messages_as_prompt(messages)
 
     # Build command

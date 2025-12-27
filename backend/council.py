@@ -2,7 +2,7 @@
 
 from typing import List, Dict, Any, Tuple
 from .cli_adapter import query_models_parallel, query_model
-from .config import COUNCIL_MODELS, CHAIRMAN_MODEL
+from . import cli_config
 
 
 async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
@@ -17,8 +17,12 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
     """
     messages = [{"role": "user", "content": user_query}]
 
+    # Get active council models
+    active_clis = cli_config.get_active_clis()
+    council_models = [cli["id"] for cli in active_clis]
+
     # Query all models in parallel
-    responses = await query_models_parallel(COUNCIL_MODELS, messages)
+    responses = await query_models_parallel(council_models, messages)
 
     # Format results
     stage1_results = []
@@ -94,8 +98,12 @@ Now provide your evaluation and ranking:"""
 
     messages = [{"role": "user", "content": ranking_prompt}]
 
+    # Get active council models
+    active_clis = cli_config.get_active_clis()
+    council_models = [cli["id"] for cli in active_clis]
+
     # Get rankings from all council models in parallel
-    responses = await query_models_parallel(COUNCIL_MODELS, messages)
+    responses = await query_models_parallel(council_models, messages)
 
     # Format results
     stage2_results = []
@@ -158,18 +166,28 @@ Provide a clear, well-reasoned final answer that represents the council's collec
 
     messages = [{"role": "user", "content": chairman_prompt}]
 
+    # Get chairman from config
+    chairman = cli_config.get_chairman()
+    if chairman is None:
+        return {
+            "model": "error",
+            "response": "Error: No chairman configured."
+        }
+
+    chairman_id = chairman["id"]
+
     # Query the chairman model
-    response = await query_model(CHAIRMAN_MODEL, messages)
+    response = await query_model(chairman_id, messages)
 
     if response is None:
         # Fallback if chairman fails
         return {
-            "model": CHAIRMAN_MODEL,
+            "model": chairman_id,
             "response": "Error: Unable to generate final synthesis."
         }
 
     return {
-        "model": CHAIRMAN_MODEL,
+        "model": chairman_id,
         "response": response.get('content', '')
     }
 
@@ -274,8 +292,17 @@ Title:"""
 
     messages = [{"role": "user", "content": title_prompt}]
 
-    # Use gemini for title generation (fast)
-    response = await query_model("gemini", messages, timeout=30.0)
+    # Use chairman for title generation (or first available model)
+    chairman = cli_config.get_chairman()
+    if chairman is None:
+        active_clis = cli_config.get_active_clis()
+        if not active_clis:
+            return "New Conversation"
+        model_id = active_clis[0]["id"]
+    else:
+        model_id = chairman["id"]
+
+    response = await query_model(model_id, messages, timeout=30.0)
 
     if response is None:
         # Fallback to a generic title

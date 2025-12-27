@@ -10,7 +10,9 @@ import json
 import asyncio
 
 from . import storage
+from . import cli_config
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
+from .cli_adapter import query_model
 
 app = FastAPI(title="LLM Council API")
 
@@ -32,6 +34,28 @@ class CreateConversationRequest(BaseModel):
 class SendMessageRequest(BaseModel):
     """Request to send a message in a conversation."""
     content: str
+
+
+class CLIConfig(BaseModel):
+    """Single CLI configuration."""
+    id: str
+    name: str
+    command: str
+    args: List[str]
+    enabled: bool
+
+
+class ConfigRequest(BaseModel):
+    """Full configuration request."""
+    clis: List[CLIConfig]
+    chairman_id: str
+    council_ids: List[str]
+
+
+class TestCLIRequest(BaseModel):
+    """Request to test a CLI command."""
+    command: str
+    args: List[str]
 
 
 class ConversationMetadata(BaseModel):
@@ -192,6 +216,78 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             "Connection": "keep-alive",
         }
     )
+
+
+# ============================================================================
+# Configuration endpoints
+# ============================================================================
+
+@app.get("/api/config")
+async def get_config():
+    """Get the CLI configuration."""
+    return cli_config.load_config()
+
+
+@app.put("/api/config")
+async def update_config(request: ConfigRequest):
+    """Update the CLI configuration."""
+    config = request.model_dump()
+
+    # Validate the config
+    is_valid, error = cli_config.validate_config(config)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error)
+
+    # Save the config
+    cli_config.save_config(config)
+    return {"status": "ok"}
+
+
+@app.post("/api/config/test-cli")
+async def test_cli(request: TestCLIRequest):
+    """
+    Test a CLI command with a simple prompt.
+    Returns success/failure and response or error message.
+    Timeout: 30 seconds.
+    """
+    test_prompt = "Say hello in one sentence."
+
+    try:
+        import asyncio
+
+        cmd = [request.command] + request.args + [test_prompt]
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=30.0
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            return {"success": False, "error": "CLI timed out after 30 seconds"}
+
+        if process.returncode != 0:
+            error_msg = stderr.decode().strip() or f"CLI exited with code {process.returncode}"
+            return {"success": False, "error": error_msg}
+
+        response = stdout.decode().strip()
+        # Truncate long responses for display
+        if len(response) > 200:
+            response = response[:200] + "..."
+
+        return {"success": True, "response": response}
+
+    except FileNotFoundError:
+        return {"success": False, "error": f"Command not found: {request.command}"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 if __name__ == "__main__":

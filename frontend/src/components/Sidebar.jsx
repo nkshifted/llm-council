@@ -6,6 +6,7 @@ export default function Sidebar({
   currentConversationId,
   onSelectConversation,
   onNewConversation,
+  onOpenSettings,
 }) {
   return (
     <div className="sidebar">
@@ -37,6 +38,17 @@ export default function Sidebar({
             </div>
           ))
         )}
+      </div>
+
+      <div className="sidebar-footer">
+        <button
+          className="settings-btn"
+          onClick={onOpenSettings}
+          title="Settings"
+        >
+          <span className="settings-icon">{'\u2699'}</span>
+          <span>Settings</span>
+        </button>
       </div>
     </div>
   );

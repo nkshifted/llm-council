@@ -76,3 +76,33 @@
   color: #999;
   font-size: 12px;
 }
+
+.sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.settings-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.settings-btn:hover {
+  background: #f0f0f0;
+  border-color: #ccc;
+  color: #333;
+}
+
+.settings-icon {
+  font-size: 18px;
+}
